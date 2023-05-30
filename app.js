@@ -32,6 +32,31 @@ const initializeDbAndServer = async () => {
 
 initializeDbAndServer();
 
+const authenticateToken = (request, response, next) => {
+  let jwtToken;
+  const authHeader = request.headers["authorization"];
+  if (authHeader === undefined) {
+    response.status(401);
+    response.send("Invalid JWT Token");
+  } else {
+    jwtToken = authHeader.split(" ")[1];
+    if (jwtToken === undefined) {
+      response.status(401);
+      response.send("Invalid JWT Token");
+    } else {
+      jwt.verify(jwtToken, "MY_TOKEN", async (error, payload) => {
+        if (error) {
+          response.status(401);
+          response.send("Invalid JWT Token");
+        } else {
+          request.username = payload.username;
+          next();
+        }
+      });
+    }
+  }
+};
+
 //API 1
 app.post("/register/", async (request, response) => {
   const { username, password, name, gender } = request.body;
@@ -83,4 +108,22 @@ app.post("/login/", async (request, response) => {
       response.send("Invalid password");
     }
   }
+});
+
+//API 3
+app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
+  const queryToGetlatestTweetsOfThePeopleWhomTheUserFollows = `
+    SELECT
+        username, tweet, date_time AS dateTime
+    FROM 
+        user NATURAL JOIN tweet 
+    ORDER BY 
+        date_time DESC
+    Limit 4
+    OFFSET 0;
+    `;
+  const latestFourTweets = await db.all(
+    queryToGetlatestTweetsOfThePeopleWhomTheUserFollows
+  );
+  response.send(latestFourTweets);
 });
