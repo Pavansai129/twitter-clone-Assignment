@@ -113,15 +113,21 @@ app.post("/login/", async (request, response) => {
 //API 3
 app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
   const queryToGetlatestTweetsOfThePeopleWhomTheUserFollows = `
-    SELECT
-        username, tweet, date_time AS dateTime
-    FROM 
-        user NATURAL JOIN tweet 
-    ORDER BY 
-        date_time DESC
-    Limit 4
-    OFFSET 0;
-    `;
+  SELECT 
+    user.username, tweet.tweet, tweet.date_time AS dateTime  
+  FROM 
+    user INNER JOIN follower ON user.user_id = follower.follower_user_id
+    INNER JOIN tweet ON follower.follower_user_id = tweet.user_id
+  WHERE 
+    follower.following_user_id = (SELECT follower.following_user_id FROM 
+        user INNER JOIN follower ON user.user_id = follower.follower_user_id
+    INNER JOIN tweet ON follower.follower_user_id = tweet.user_id
+        WHERE user.username = "${request.username}")
+  ORDER BY
+        tweet.date_time DESC
+  LIMIT 4
+  OFFSET 0;
+  `;
   const latestFourTweets = await db.all(
     queryToGetlatestTweetsOfThePeopleWhomTheUserFollows
   );
