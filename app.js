@@ -181,7 +181,10 @@ app.get("/user/followers", authenticateToken, async (request, response) => {
 
 //API 6
 app.get("/tweets/:tweetId", authenticateToken, async (request, response) => {
-  const { tweetId } = request.params;
+  let { tweetId } = request.params;
+  tweetId = parseInt(tweetId);
+  console.log(tweetId);
+  console.log(typeof tweetId);
   const userFollowingTweetsFeedQuery = `
   SELECT 
     DISTINCT tweet.tweet_id
@@ -199,10 +202,37 @@ app.get("/tweets/:tweetId", authenticateToken, async (request, response) => {
     );
   `;
   const userFollowingTweetsFeed = await db.all(userFollowingTweetsFeedQuery);
-  const userFollowingTweetsFeedList = userFollowingTweetsFeed.map(
-    (each) => each.tweet_id
+  const userFollowingTweetsFeedList = userFollowingTweetsFeed.map((each) =>
+    parseInt(each.tweet_id)
   );
-  response.send(userFollowingTweetsFeedList);
-  if (userFollowingTweetsFeedList.includes()) {
+  console.log(userFollowingTweetsFeedList);
+  console.log(typeof userFollowingTweetsFeedList[0]);
+  console.log(userFollowingTweetsFeedList.includes(tweetId));
+  if (userFollowingTweetsFeedList.includes(tweetId)) {
+    const userFollowingTweetsDetails = `
+    SELECT
+        *
+    FROM
+        user INNER JOIN tweet ON user.user_id = tweet.user_id INNER JOIN
+        follower ON tweet.user_id = follower.following_user_id INNER JOIN
+        like ON tweet.tweet_id = like.tweet_id INNER JOIN reply ON 
+        tweet.tweet_id = reply.tweet_id
+    WHERE 
+        follower.follower_user_id = (
+            SELECT
+                user_id
+            FROM
+                user
+            WHERE username = "${request.username}"
+            ) AND tweet.tweet_id = ${tweetId}
+        GROUP BY tweet.tweet_id;
+    `;
+    const specificTweetOfUserFollowingFeed = await db.get(
+      userFollowingTweetsDetails
+    );
+    response.send(specificTweetOfUserFollowingFeed);
+  } else {
+    response.status(401);
+    response.send("Invalid Request");
   }
 });
