@@ -133,3 +133,18 @@ app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
   );
   response.send(latestFourTweets);
 });
+
+app.get("/user/following/", authenticateToken, async (request, response) => {
+  const queryToGetWhomTheUserFollows = `
+    SELECT 
+        user.username
+    FROM 
+        user INNER JOIN follower ON user.user_id = follower.follower_user_id
+    WHERE 
+        follower.following_user_id = (SELECT follower.following_user_id FROM 
+             user INNER JOIN follower ON user.user_id = follower.follower_user_id
+             WHERE user.user_id = follower.follower_user_id);
+    `;
+  const userFollowingNamesList = await db.all(queryToGetWhomTheUserFollows);
+  response.send(userFollowingNamesList);
+});
