@@ -112,39 +112,27 @@ app.post("/login/", async (request, response) => {
 
 //API 3
 app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
-  const queryToGetlatestTweetsOfThePeopleWhomTheUserFollows = `
-  SELECT 
-    user.username, tweet.tweet, tweet.date_time AS dateTime  
-  FROM 
-    user INNER JOIN follower ON user.user_id = follower.follower_user_id
-    INNER JOIN tweet ON follower.follower_user_id = tweet.user_id
-  WHERE 
-    follower.following_user_id = (SELECT follower.following_user_id FROM 
-        user INNER JOIN follower ON user.user_id = follower.follower_user_id
-    INNER JOIN tweet ON follower.follower_user_id = tweet.user_id
-        WHERE user.username = "${request.username}")
-  ORDER BY
-        tweet.date_time DESC
-  LIMIT 4
-  OFFSET 0;
-  `;
-  const latestFourTweets = await db.all(
-    queryToGetlatestTweetsOfThePeopleWhomTheUserFollows
-  );
-  response.send(latestFourTweets);
-});
-
-app.get("/user/following/", authenticateToken, async (request, response) => {
-  const queryToGetWhomTheUserFollows = `
-    SELECT 
-        user.username
+  const queryToGetUserId = `
+    SELECT
+        user_id
     FROM 
-        user INNER JOIN follower ON user.user_id = follower.follower_user_id
-    WHERE 
-        follower.following_user_id = (SELECT follower.following_user_id FROM 
-             user INNER JOIN follower ON user.user_id = follower.follower_user_id
-             WHERE user.user_id = follower.follower_user_id);
-    `;
-  const userFollowingNamesList = await db.all(queryToGetWhomTheUserFollows);
-  response.send(userFollowingNamesList);
+        user
+    WHERE
+        username = "${request.username}";
+  `;
+  const userId = await db.get(queryToGetUserId);
+  //query to get the tweets of the people whom the user follows
+  const userFeedQuery = `
+  SELECT
+    user.username, tweet.tweet, tweet.date_time AS dateTime
+  FROM user NATURAL JOIN tweet INNER JOIN follower ON tweet.user_id = follower.following_user_id
+  WHERE follower.following_user_id = tweet.user_id AND follower.follower_user_id = 2
+  ORDER BY 
+    tweet.date_time DESC
+  LIMIT 4
+  OFFSET 0
+  ;
+  `;
+  const userFeed = await db.all(userFeedQuery);
+  console.log(userFeed);
 });
