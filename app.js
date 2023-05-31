@@ -112,27 +112,97 @@ app.post("/login/", async (request, response) => {
 
 //API 3
 app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
-  const queryToGetUserId = `
-    SELECT
-        user_id
-    FROM 
-        user
-    WHERE
-        username = "${request.username}";
-  `;
-  const userId = await db.get(queryToGetUserId);
   //query to get the tweets of the people whom the user follows
   const userFeedQuery = `
   SELECT
     user.username, tweet.tweet, tweet.date_time AS dateTime
-  FROM user NATURAL JOIN tweet INNER JOIN follower ON tweet.user_id = follower.following_user_id
-  WHERE follower.following_user_id = tweet.user_id AND follower.follower_user_id = 2
+  FROM 
+    user NATURAL JOIN tweet INNER JOIN follower ON tweet.user_id = follower.following_user_id
+  WHERE 
+    follower.follower_user_id = (
+      SELECT 
+        user_id
+    FROM
+        user
+    WHERE 
+        username = "${request.username}"
+  )
   ORDER BY 
-    tweet.date_time DESC
+    tweet.tweet_id DESC
   LIMIT 4
   OFFSET 0
   ;
   `;
   const userFeed = await db.all(userFeedQuery);
-  console.log(userFeed);
+  response.send(userFeed);
+});
+
+//API 4
+app.get("/user/following/", authenticateToken, async (request, response) => {
+  const userFollowingNamesQuery = `
+    SELECT
+        name
+    FROM 
+        user INNER JOIN follower ON user.user_id = follower.following_user_id
+    WHERE
+        follower.follower_user_id = (
+            SELECT
+                user_id
+            FROM
+                user
+            WHERE
+                username = "${request.username}"
+        )
+    `;
+  const userFollowingNamesList = await db.all(userFollowingNamesQuery);
+  response.send(userFollowingNamesList);
+});
+
+//API 5
+app.get("/user/followers", authenticateToken, async (request, response) => {
+  const userFollowersNamesQuery = `
+    SELECT 
+        name
+    FROM
+        user INNER JOIN follower ON user.user_id = follower.follower_user_id
+    WHERE
+        follower.following_user_id = (
+            SELECT
+                user_id
+            FROM 
+                user
+            WHERE 
+                username = "${request.username}"
+        );
+    `;
+  const userFollowersNamesList = await db.all(userFollowersNamesQuery);
+  response.send(userFollowersNamesList);
+});
+
+//API 6
+app.get("/tweets/:tweetId", authenticateToken, async (request, response) => {
+  const { tweetId } = request.params;
+  const userFollowingTweetsFeedQuery = `
+  SELECT 
+    DISTINCT tweet.tweet_id
+  FROM
+    user INNER JOIN tweet ON user.user_id = tweet.user_id INNER JOIN
+    follower ON tweet.user_id = follower.following_user_id
+  WHERE
+    follower.follower_user_id = (
+        SELECT 
+            user_id
+        FROM
+            user
+        WHERE
+            username = "${request.username}"
+    );
+  `;
+  const userFollowingTweetsFeed = await db.all(userFollowingTweetsFeedQuery);
+  const userFollowingTweetsFeedList = userFollowingTweetsFeed.map(
+    (each) => each.tweet_id
+  );
+  response.send(userFollowingTweetsFeedList);
+  if (userFollowingTweetsFeedList.includes()) {
+  }
 });
