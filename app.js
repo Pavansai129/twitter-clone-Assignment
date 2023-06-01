@@ -367,17 +367,71 @@ app.get("/user/tweets/", authenticateToken, async (request, response) => {
   let userTweetIds = await db.all(userTweetIdsQuery);
   userTweetIds = userTweetIds.map((each) => each.tweet_id);
   console.log(userTweetIds);
-  const userTweetsQuery = `
-       SELECT 
-         *
-        FROM
-            tweet INNER JOIN
-            like ON tweet.tweet_id = like.tweet_id 
-        WHERE
-            tweet.user_id = (SELECT user_id FROM user WHERE username = "${request.username}")
-        GROUP BY
-            tweet.user_id;
+  const userTweetDetails = [];
+  let tweet;
+  let likes;
+  let replies;
+  let dateTime;
+  let userTweet;
+  let userTweetQuery;
+  let userLikes;
+  let userTweetLikesQuery;
+  let userReplies;
+  let userTweetRepliesQuery;
+  let userTweetDateTime;
+  let userTweetDateTimeQuery;
+  for (let eachTweetId of userTweetIds) {
+    userTweetQuery = `
+      SELECT tweet FROM tweet WHERE tweet_id = ${eachTweetId};
+      `;
+    userTweetLikesQuery = `
+    SELECT COUNT(*) AS likes FROM like WHERE tweet_id = ${eachTweetId};
+    `;
+    userTweetRepliesQuery = `
+    SELECT COUNT(*) AS replies FROM reply WHERE tweet_id = ${eachTweetId};
+    `;
+    userTweetDateTimeQuery = `
+    SELECT date_time AS dateTime FROM tweet WHERE tweet_id = ${eachTweetId};
+    `;
+    userTweet = await db.get(userTweetQuery);
+    console.log(userTweet);
+    likes = await db.get(userTweetLikesQuery);
+    console.log(likes);
+    replies = await db.get(userTweetRepliesQuery);
+    console.log(replies);
+    userTweetDateTime = await db.get(userTweetDateTimeQuery);
+    console.log(userTweetDateTime);
+    userTweetDetails.push({
+      tweet: userTweet.tweet,
+      likes: likes.likes,
+      replies: replies.replies,
+      dateTime: userTweetDateTime.dateTime,
+    });
+  }
+  response.send(userTweetDetails);
+});
+
+//API 10
+app.post("/user/tweets/", authenticateToken, async (request, response) => {
+  const { tweet } = request.body;
+  console.log(tweet);
+  let userId;
+  const getUserIdQuery = `
+    SELECT
+        user_id
+    FROM
+        user
+    WHERE
+        username = "${request.username}";
+    `;
+  userId = await db.get(getUserIdQuery);
+  userId = userId.user_id;
+  const addUserTweetQuery = `
+  INSERT INTO
+    tweet (tweet, user_id)
+  VALUES
+    ("${tweet}", ${userId})
   `;
-  const userTweets = await db.all(userTweetsQuery);
-  response.send(userTweets);
+  await db.run(addUserTweetQuery);
+  response.send("Created a Tweet");
 });
