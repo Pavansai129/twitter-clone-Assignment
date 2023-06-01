@@ -206,7 +206,7 @@ app.get("/tweets/:tweetId", authenticateToken, async (request, response) => {
   if (userFollowingTweetsFeedList.includes(tweetId)) {
     const userFollowingTweetsDetails = `
     SELECT
-        (SELECT tweet FROM tweet WHERE tweet_id = 7) AS tweet,
+        (SELECT tweet FROM tweet WHERE tweet_id = ${tweetId}) AS tweet,
         (SELECT COUNT() FROM like WHERE tweet_id = ${tweetId}) AS likes,
         (SELECT COUNT() FROM reply WHERE tweet_id = ${tweetId}) AS replies,
         (SELECT date_time FROM tweet WHERE tweet_id = ${tweetId}) AS dateTime
@@ -228,6 +228,156 @@ app.get("/tweets/:tweetId", authenticateToken, async (request, response) => {
     response.send(specificTweetOfUserFollowingFeed);
   } else {
     response.status(401);
-    response.send("Invalid Request...");
+    response.send("Invalid Request");
   }
+});
+
+//API 7
+app.get(
+  "/tweets/:tweetId/likes/",
+  authenticateToken,
+  async (request, response) => {
+    let { tweetId } = request.params;
+    tweetId = parseInt(tweetId);
+    console.log(tweetId);
+    console.log(typeof tweetId);
+    const userFollowingTweetsFeedQuery = `
+  SELECT 
+    DISTINCT tweet.tweet_id
+  FROM
+    user INNER JOIN tweet ON user.user_id = tweet.user_id INNER JOIN
+    follower ON tweet.user_id = follower.following_user_id
+  WHERE
+    follower.follower_user_id = (
+        SELECT 
+            user_id
+        FROM
+            user
+        WHERE
+            username = "${request.username}"
+    );
+  `;
+    const userFollowingTweetsFeed = await db.all(userFollowingTweetsFeedQuery);
+    const userFollowingTweetsFeedList = userFollowingTweetsFeed.map((each) =>
+      parseInt(each.tweet_id)
+    );
+    console.log(userFollowingTweetsFeedList);
+    console.log(typeof userFollowingTweetsFeedList[0]);
+    console.log(userFollowingTweetsFeedList.includes(tweetId));
+    if (userFollowingTweetsFeedList.includes(tweetId)) {
+      const userFeedSpecificTweetLikesQuery = `
+    SELECT
+        username AS likes
+    FROM 
+        user NATURAL JOIN tweet NATURAL JOIN like INNER JOIN follower ON tweet.user_id =  follower.following_user_id
+    WHERE
+        follower.follower_user_id = (
+            SELECT 
+                user_id
+            FROM
+                user
+            WHERE
+                username = "${request.username}" 
+        );
+    `;
+      const userFeedSpecificTweetLikes = await db.all(
+        userFeedSpecificTweetLikesQuery
+      );
+      response.send({
+        likes: userFeedSpecificTweetLikes.map((each) => each.likes),
+      });
+    } else {
+      response.status(401);
+      response.send("Invalid Request");
+    }
+  }
+);
+
+//API 8
+app.get(
+  "/tweets/:tweetId/replies/",
+  authenticateToken,
+  async (request, response) => {
+    let { tweetId } = request.params;
+    tweetId = parseInt(tweetId);
+    console.log(tweetId);
+    console.log(typeof tweetId);
+    const userFollowingTweetsFeedQuery = `
+  SELECT 
+    DISTINCT tweet.tweet_id
+  FROM
+    user INNER JOIN tweet ON user.user_id = tweet.user_id INNER JOIN
+    follower ON tweet.user_id = follower.following_user_id
+  WHERE
+    follower.follower_user_id = (
+        SELECT 
+            user_id
+        FROM
+            user
+        WHERE
+            username = "${request.username}"
+    );
+  `;
+    const userFollowingTweetsFeed = await db.all(userFollowingTweetsFeedQuery);
+    const userFollowingTweetsFeedList = userFollowingTweetsFeed.map((each) =>
+      parseInt(each.tweet_id)
+    );
+    console.log(userFollowingTweetsFeedList);
+    console.log(typeof userFollowingTweetsFeedList[0]);
+    console.log(userFollowingTweetsFeedList.includes(tweetId));
+    if (userFollowingTweetsFeedList.includes(tweetId)) {
+      const userFeedSpecificTweetRepliesQuery = `
+    SELECT
+        user.name, reply.reply
+    FROM 
+        user NATURAL JOIN tweet NATURAL JOIN reply INNER JOIN follower ON tweet.user_id =  follower.following_user_id
+    WHERE
+        follower.follower_user_id = (
+            SELECT 
+                user_id
+            FROM
+                user
+            WHERE
+                username = "${request.username}" AND tweet.tweet_id = ${tweetId} 
+        );
+    `;
+      const userFeedSpecificTweetReplies = await db.all(
+        userFeedSpecificTweetRepliesQuery
+      );
+      response.send({
+        replies: userFeedSpecificTweetReplies,
+      });
+    } else {
+      response.status(401);
+      response.send("Invalid Request");
+    }
+  }
+);
+
+//API 9
+app.get("/user/tweets/", authenticateToken, async (request, response) => {
+  const userTweetIdsQuery = `
+    SELECT 
+        tweet_id
+    FROM
+        tweet
+    WHERE
+        user_id = (SELECT user_id FROM user WHERE username = "${request.username}");
+    `;
+  let userTweetIds = await db.all(userTweetIdsQuery);
+  userTweetIds = userTweetIds.map((each) => each.tweet_id);
+  console.log(userTweetIds);
+  const userTweetsQuery = `
+       SELECT 
+         *
+        FROM
+            tweet INNER JOIN
+            like ON tweet.tweet_id = like.tweet_id 
+        WHERE
+            tweet.user_id = (SELECT user_id FROM user WHERE username = "${request.username}")
+        GROUP BY
+            tweet.user_id;
+  `;
+  const userTweets = await db.all(userTweetsQuery);
+  response.send(userTweets);
 });
