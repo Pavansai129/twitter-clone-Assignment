@@ -131,9 +131,11 @@ app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
   FROM
     user INNER JOIN follower ON user.user_id = follower.following_user_id INNER JOIN tweet ON follower.following_user_id = tweet.user_id
   WHERE 
-    follower.follower_user_id = ${userId};
+    follower.follower_user_id = ${userId}
+  ORDER BY
+    tweet.date_time DESC
   LIMIT 4
-  OFFSET 0
+  OFFSET 0;
    `;
   userFollowingUsernameAndTweetAndDateTime = await db.all(
     userFollowingUsernameAndTweetAndDateTimeQuery
