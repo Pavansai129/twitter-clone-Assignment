@@ -61,7 +61,12 @@ const authenticateToken = (request, response, next) => {
 app.post("/register/", async (request, response) => {
   const { username, password, name, gender } = request.body;
   const selectUserQuery = `
-      SELECT username FROM user WHERE username = "${username}";
+      SELECT 
+        username 
+      FROM 
+        user 
+      WHERE 
+        username = "${username}";
       `;
   const isUserAlreadyExists = await db.get(selectUserQuery);
   console.log(isUserAlreadyExists);
@@ -229,15 +234,32 @@ app.get("/tweets/:tweetId", authenticateToken, async (request, response) => {
   let userFollowingTweetRepliesQuery;
   console.log(userFollowingTweetIds.includes(tweetId));
   if (userFollowingTweetIds.includes(tweetId)) {
-    userFollowingTweetAndDateTimeQuery = `SELECT tweet, date_time AS dateTime FROM tweet WHERE tweet_id = ${tweetId}`;
+    userFollowingTweetAndDateTimeQuery = `
+    SELECT 
+        tweet, 
+        date_time AS dateTime 
+    FROM 
+        tweet WHERE tweet_id = ${tweetId}`;
     userFollowingTweetAndDateTime = await db.get(
       userFollowingTweetAndDateTimeQuery
     );
     console.log(userFollowingTweetAndDateTime);
-    userFollowingTweetLikesQuery = `SELECT COUNT(*) AS likes FROM like WHERE tweet_id = ${tweetId}`;
+    userFollowingTweetLikesQuery = `
+    SELECT 
+        COUNT(*) AS likes 
+    FROM 
+        like 
+    WHERE 
+        tweet_id = ${tweetId}`;
     userFollowingTweetLikes = await db.get(userFollowingTweetLikesQuery);
     console.log(userFollowingTweetLikes);
-    userFollowingTweetRepliesQuery = `SELECT Count(*) AS replies FROM reply WHERE tweet_id = ${tweetId}`;
+    userFollowingTweetRepliesQuery = `
+    SELECT 
+        Count(*) AS replies 
+    FROM 
+        reply 
+    WHERE 
+        tweet_id = ${tweetId}`;
     userFollowingTweetReplies = await db.get(userFollowingTweetRepliesQuery);
     console.log(userFollowingTweetReplies);
     response.send({
@@ -300,7 +322,12 @@ app.get(
     console.log(userFollowingTweetIds.includes(tweetId));
     if (userFollowingTweetIds.includes(tweetId)) {
       userIdsWhoLikedUserFollowingTweetQuery = `
-    SELECT user_id FROM like WHERE tweet_id = ${tweetId};
+    SELECT 
+        user_id 
+    FROM 
+        like 
+    WHERE 
+        tweet_id = ${tweetId};
     `;
       userIdsWhoLikedUserFollowingTweet = await db.all(
         userIdsWhoLikedUserFollowingTweetQuery
@@ -414,16 +441,34 @@ app.get("/user/tweets/", authenticateToken, async (request, response) => {
   let userTweetDateTimeQuery;
   for (let eachTweetId of userTweetIds) {
     userTweetQuery = `
-      SELECT tweet FROM tweet WHERE tweet_id = ${eachTweetId};
+      SELECT 
+        tweet 
+      FROM 
+        tweet 
+      WHERE 
+        tweet_id = ${eachTweetId};
       `;
     userTweetLikesQuery = `
-    SELECT COUNT(*) AS likes FROM like WHERE tweet_id = ${eachTweetId};
+    SELECT 
+        COUNT(*) AS likes 
+    FROM 
+        like 
+    WHERE 
+        tweet_id = ${eachTweetId};
     `;
     userTweetRepliesQuery = `
-    SELECT COUNT(*) AS replies FROM reply WHERE tweet_id = ${eachTweetId};
+    SELECT 
+        COUNT(*) AS replies 
+    FROM reply 
+        WHERE tweet_id = ${eachTweetId};
     `;
     userTweetDateTimeQuery = `
-    SELECT date_time AS dateTime FROM tweet WHERE tweet_id = ${eachTweetId};
+    SELECT 
+        date_time AS dateTime 
+    FROM 
+        tweet 
+    WHERE 
+        tweet_id = ${eachTweetId};
     `;
     userTweet = await db.get(userTweetQuery);
     console.log(userTweet);
